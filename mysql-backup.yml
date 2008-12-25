@@ -1,0 +1,8 @@
+---
+username: username
+password: password
+location: /path/to/folder
+except_db:
+  - mysql
+  - information_schema
+  - test

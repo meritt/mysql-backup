@@ -1,0 +1,53 @@
+#!/usr/local/bin/ruby
+
+require "yaml"
+require "mysql"
+
+# Check for /etc/mysql-backup.yml
+unless File.exists?("/etc/mysql-backup.yml")
+  puts "/etc/mysql-backup.yml not found."
+  exit
+end
+
+# Read in the config file and setup config vars
+yaml_config = YAML.load_file("/etc/mysql-backup.yml")
+
+mysql_username  = yaml_config["username"]
+mysql_password  = yaml_config["password"]
+backup_location = yaml_config["location"]
+except_db       = yaml_config["except_db"]
+
+begin
+  # Try to connect to MySQL
+  dbh = Mysql.real_connect("localhost", mysql_username, mysql_password, "mysql")
+  begin
+    result = dbh.query("SHOW DATABASES")
+  rescue
+    puts "Error: Could not obtain list of databases.  Are you trying to use a user other than root?"
+    exit
+  end
+rescue Mysql::Error => e
+  puts "Could not connect to MySQL using information in /etc/mysql-backup.yml!"
+  puts "Error encountered: #{e.errno} - #{e.error}"
+  exit
+ensure
+  dbh.close if dbh
+end
+
+time = Time.now
+
+while row = result.fetch_row do
+  if !except_db.include? row.to_s
+    print "Backuping #{row} db... "
+    location_db = "#{backup_location}/#{row}"
+    Dir.mkdir(location_db) if !File.exist?(location_db)
+    location_db_file = "#{location_db}/#{row}.sql"
+
+    `/usr/local/bin/mysqldump --quick --opt -e -u#{mysql_username} -p#{mysql_password} #{row} > #{location_db_file}`
+    `/usr/bin/bzip2 #{location_db_file}`
+    `/bin/mv #{location_db_file}.bz2 #{location_db}/#{row}-#{time.year}#{time.strftime('%m')}#{time.strftime('%d')}.sql.bz2`
+    puts " done.\n"
+  end
+end
+
+result.free
