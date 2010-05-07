@@ -37,15 +37,15 @@ end
 time = Time.now
 
 while row = result.fetch_row do
-  if !except_db.include? row.to_s
+  if !except_db.include? row.first.to_s
     print "Backuping #{row} db... "
-    location_db = "#{backup_location}/#{row}"
+    location_db = "#{backup_location}/#{row.first}"
     Dir.mkdir(location_db) if !File.exist?(location_db)
-    location_db_file = "#{location_db}/#{row}.sql"
+    location_db_file = "#{location_db}/#{row.first}.sql"
 
-    `/usr/local/bin/mysqldump --quick --opt -e -u#{mysql_username} -p#{mysql_password} #{row} > #{location_db_file}`
-    `/usr/bin/bzip2 #{location_db_file}`
-    `/bin/mv #{location_db_file}.bz2 #{location_db}/#{row}-#{time.year}#{time.strftime('%m')}#{time.strftime('%d')}.sql.bz2`
+    `mysqldump --quick --opt -e -u#{mysql_username} -p#{mysql_password} #{row.first} > #{location_db_file}`
+    `bzip2 #{location_db_file}`
+    `mv #{location_db_file}.bz2 #{location_db}/#{row.first}-#{time.year}#{time.strftime('%m')}#{time.strftime('%d')}.sql.bz2`
     puts " done.\n"
   end
 end
