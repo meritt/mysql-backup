@@ -5,4 +5,5 @@ location: /path/to/folder
 except_db:
   - mysql
   - information_schema
+  - performance_schema
   - test
